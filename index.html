@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>FlashRead Mobile</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: rgba(16, 23, 44, 0.82);
+      --panel-solid: #111a33;
+      --text: #ecf2ff;
+      --muted: #9db0d7;
+      --accent: #4cc9f0;
+      --accent2: #8d5cff;
+      --good: #21d19f;
+      --danger: #ff6b6b;
+      --shadow: 0 12px 40px rgba(0, 0, 0, 0.36);
+      --radius: 18px;
+      --safe-top: env(safe-area-inset-top);
+      --safe-bottom: env(safe-area-inset-bottom);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; height: 100%; }
+    body {
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(1200px 600px at 85% -10%, rgba(76, 201, 240, 0.18), transparent),
+        radial-gradient(900px 700px at -20% 120%, rgba(141, 92, 255, 0.25), transparent),
+        var(--bg);
+      line-height: 1.4;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .app {
+      min-height: 100dvh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      padding: calc(12px + var(--safe-top)) 12px calc(12px + var(--safe-bottom));
+      gap: 12px;
+      max-width: 780px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: var(--panel);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: var(--shadow);
+      border-radius: var(--radius);
+    }
+
+    .header {
+      padding: 14px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .title { font-size: 1.04rem; font-weight: 700; letter-spacing: 0.2px; }
+    .subtitle { font-size: 0.83rem; color: var(--muted); }
+    .pill {
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.2);
+      font-size: 0.76rem;
+      color: var(--muted);
+      background: rgba(255,255,255,0.03);
+      white-space: nowrap;
+    }
+
+    .main { overflow: hidden; position: relative; }
+
+    .screen {
+      height: 100%;
+      overflow: auto;
+      padding: 12px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .hidden { display: none !important; }
+
+    .input-grid { display: grid; gap: 12px; }
+
+    .tabs {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      background: rgba(255,255,255,0.03);
+      border-radius: 12px;
+      padding: 4px;
+      gap: 4px;
+    }
+
+    .tab {
+      border: 0;
+      padding: 10px 8px;
+      border-radius: 10px;
+      font-weight: 600;
+      color: var(--muted);
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .tab.active { background: rgba(76, 201, 240, 0.14); color: #dff7ff; }
+
+    .panel {
+      background: rgba(0,0,0,0.2);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+      padding: 12px;
+      display: grid;
+      gap: 10px;
+    }
+
+    textarea, input[type="url"], input[type="text"], input[type="number"] {
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.04);
+      color: var(--text);
+      padding: 12px;
+      font: inherit;
+      outline: none;
+    }
+
+    textarea { min-height: 180px; resize: vertical; }
+
+    .row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .grow { flex: 1; }
+
+    button {
+      border: 0;
+      border-radius: 12px;
+      padding: 11px 14px;
+      font: inherit;
+      font-weight: 700;
+      color: white;
+      cursor: pointer;
+      background: linear-gradient(120deg, var(--accent), var(--accent2));
+    }
+
+    button.secondary {
+      background: rgba(255,255,255,0.07);
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,0.18);
+      font-weight: 600;
+    }
+
+    button.danger {
+      background: rgba(255, 107, 107, 0.2);
+      border: 1px solid rgba(255, 107, 107, 0.4);
+      color: #ffdada;
+    }
+
+    .hint { font-size: 0.8rem; color: var(--muted); }
+    .status { font-size: 0.82rem; color: var(--good); min-height: 18px; }
+
+    .reader {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 12px;
+      height: 100%;
+      touch-action: none;
+      user-select: none;
+    }
+
+    .controls {
+      display: grid;
+      gap: 8px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 14px;
+      padding: 10px;
+    }
+
+    .statline {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+      font-size: 0.84rem;
+      color: var(--muted);
+    }
+
+    .progress-wrap {
+      height: 8px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      transition: width 80ms linear;
+    }
+
+    .display {
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: linear-gradient(170deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03));
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+      align-content: center;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .focus {
+      text-align: center;
+      font-weight: 800;
+      font-size: clamp(2rem, 7vw, 3.2rem);
+      letter-spacing: 0.2px;
+      text-wrap: balance;
+      min-height: 1.3em;
+    }
+
+    .context {
+      display: grid;
+      gap: 6px;
+      font-size: clamp(0.95rem, 3.6vw, 1.1rem);
+      color: #dae5ff;
+      min-height: 0;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .line { opacity: 0.56; word-wrap: break-word; }
+    .line.active { opacity: 1; }
+    .line .active-word {
+      color: #081328;
+      background: linear-gradient(120deg, #74dcff, #c6bbff);
+      border-radius: 7px;
+      padding: 0 4px;
+      font-weight: 750;
+    }
+
+    .gesture {
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-align: center;
+      padding: 6px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.03);
+    }
+
+    @media (min-width: 760px) {
+      .app { padding-left: 20px; padding-right: 20px; }
+      .screen { padding: 16px; }
+      .input-grid { grid-template-columns: 1.2fr 0.8fr; }
+      .panel.full { grid-column: 1 / -1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="card header">
+      <div>
+        <div class="title">FlashRead Mobile</div>
+        <div class="subtitle">Lettura RSVP + contesto, senza backend</div>
+      </div>
+      <div class="pill" id="saveState">Bozza non salvata</div>
+    </div>
+
+    <div class="card main">
+      <div class="screen" id="setupScreen">
+        <div class="input-grid">
+          <section class="panel full">
+            <div class="tabs" id="sourceTabs">
+              <button class="tab active" data-tab="paste">Incolla Testo</button>
+              <button class="tab" data-tab="file">Carica File</button>
+              <button class="tab" data-tab="url">Importa URL</button>
+            </div>
+
+            <div id="panel-paste" class="panel">
+              <textarea id="textInput" placeholder="Incolla qui un testo, articolo, capitolo..."></textarea>
+              <div class="row">
+                <button id="loadText" class="grow">Usa questo testo</button>
+                <button id="sampleText" class="secondary">Demo</button>
+              </div>
+              <div class="hint">Suggerimento: puoi incollare testi lunghi, il parsing avviene in locale nel browser.</div>
+            </div>
+
+            <div id="panel-file" class="panel hidden">
+              <input id="fileInput" type="file" accept=".txt,.md,.pdf,.epub" />
+              <div class="hint">Supporto nativo: TXT/MD. PDF tramite parser client-side. EPUB convertito in plain text.</div>
+              <div class="status" id="fileStatus"></div>
+            </div>
+
+            <div id="panel-url" class="panel hidden">
+              <input id="urlInput" type="url" placeholder="https://... (articolo, post reddit, thread pubblico)" />
+              <div class="row">
+                <button id="loadUrl" class="grow">Importa contenuto</button>
+                <button id="urlHelp" class="secondary">Note</button>
+              </div>
+              <div class="hint">Tentativo in sola modalità frontend (CORS può bloccare alcuni siti).</div>
+              <div class="status" id="urlStatus"></div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <strong>Impostazioni</strong>
+            <div class="row">
+              <div class="grow">
+                <label class="hint">Velocità iniziale (WPM)</label>
+                <input id="wpmInput" type="number" min="60" max="1200" step="10" value="320" />
+              </div>
+              <div class="grow">
+                <label class="hint">Parole linea contesto</label>
+                <input id="lineSizeInput" type="number" min="6" max="20" step="1" value="10" />
+              </div>
+            </div>
+            <button id="startReader">Avvia lettura</button>
+            <button id="restoreSession" class="secondary">Riprendi sessione salvata</button>
+            <button id="clearAll" class="danger">Azzera dati locali</button>
+            <div class="hint">I progressi vengono salvati in localStorage del browser.</div>
+          </section>
+        </div>
+      </div>
+
+      <div class="screen hidden" id="readerScreen">
+        <div class="reader" id="readerPad">
+          <div class="controls">
+            <div class="statline">
+              <span id="wpmLabel">320 WPM</span>
+              <span id="indexLabel">0 / 0</span>
+              <span id="gestureMode">In pausa</span>
+            </div>
+            <div class="progress-wrap"><div class="progress" id="progress"></div></div>
+            <div class="row">
+              <button id="backSetup" class="secondary grow">Torna al menu</button>
+              <button id="togglePlay" class="secondary">Play/Pausa</button>
+            </div>
+          </div>
+
+          <div class="display">
+            <div class="focus" id="focusWord">—</div>
+            <div class="context" id="contextArea"></div>
+          </div>
+
+          <div class="gesture">
+            <strong>Gesture:</strong> tieni premuto per far scorrere • su/giù = velocità • destra/sinistra = timeline
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs" type="module"></script>
+  <script>
+    const STORAGE_KEY = 'flashread_state_v1';
+
+    const state = {
+      text: '',
+      tokens: [],
+      index: 0,
+      wpm: 320,
+      lineSize: 10,
+      playing: false,
+      raf: null,
+      lastTick: 0,
+      holdActive: false,
+      ptrStartX: 0,
+      ptrStartY: 0,
+      ptrLastX: 0,
+      ptrLastY: 0,
+      baseWpm: 320,
+      baseIndex: 0,
+      gesture: 'pause',
+      pointerId: null,
+      linesCache: []
+    };
+
+    const els = {
+      setupScreen: document.getElementById('setupScreen'),
+      readerScreen: document.getElementById('readerScreen'),
+      sourceTabs: document.getElementById('sourceTabs'),
+      textInput: document.getElementById('textInput'),
+      loadText: document.getElementById('loadText'),
+      sampleText: document.getElementById('sampleText'),
+      fileInput: document.getElementById('fileInput'),
+      fileStatus: document.getElementById('fileStatus'),
+      urlInput: document.getElementById('urlInput'),
+      loadUrl: document.getElementById('loadUrl'),
+      urlStatus: document.getElementById('urlStatus'),
+      urlHelp: document.getElementById('urlHelp'),
+      wpmInput: document.getElementById('wpmInput'),
+      lineSizeInput: document.getElementById('lineSizeInput'),
+      startReader: document.getElementById('startReader'),
+      restoreSession: document.getElementById('restoreSession'),
+      clearAll: document.getElementById('clearAll'),
+      saveState: document.getElementById('saveState'),
+      readerPad: document.getElementById('readerPad'),
+      focusWord: document.getElementById('focusWord'),
+      contextArea: document.getElementById('contextArea'),
+      wpmLabel: document.getElementById('wpmLabel'),
+      indexLabel: document.getElementById('indexLabel'),
+      progress: document.getElementById('progress'),
+      gestureMode: document.getElementById('gestureMode'),
+      backSetup: document.getElementById('backSetup'),
+      togglePlay: document.getElementById('togglePlay')
+    };
+
+    const tokenize = text => (text || '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+
+    const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
+
+    function buildLines() {
+      state.linesCache = [];
+      for (let i = 0; i < state.tokens.length; i += state.lineSize) {
+        state.linesCache.push({
+          start: i,
+          words: state.tokens.slice(i, i + state.lineSize)
+        });
+      }
+    }
+
+    function saveLocal() {
+      if (!state.text) return;
+      const payload = {
+        text: state.text,
+        index: state.index,
+        wpm: state.wpm,
+        lineSize: state.lineSize,
+        ts: Date.now()
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      els.saveState.textContent = 'Sessione salvata';
+    }
+
+    function loadLocal() {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      try { return JSON.parse(raw); } catch { return null; }
+    }
+
+    function syncHeader() {
+      const has = !!state.text;
+      els.saveState.textContent = has ? 'Pronto' : 'Bozza non salvata';
+    }
+
+    function setText(rawText) {
+      state.text = rawText || '';
+      state.tokens = tokenize(state.text);
+      state.index = clamp(state.index, 0, Math.max(state.tokens.length - 1, 0));
+      state.lineSize = clamp(Number(els.lineSizeInput.value || 10), 6, 20);
+      buildLines();
+      updateReaderUI();
+      syncHeader();
+      saveLocal();
+    }
+
+    function importDemo() {
+      els.textInput.value = `La lettura seriale visiva rapida (RSVP) mostra una parola alla volta,
+      riducendo i movimenti oculari. In questa app mobile puoi tenere premuto per avviare,
+      trascinare in alto e in basso per modificare la velocità, e scorrere lateralmente per
+      avanzare o tornare indietro nel testo con precisione.`;
+      els.loadText.click();
+    }
+
+    function showScreen(screen) {
+      els.setupScreen.classList.toggle('hidden', screen !== 'setup');
+      els.readerScreen.classList.toggle('hidden', screen !== 'reader');
+    }
+
+    function currentLineIndex() {
+      return Math.floor(state.index / state.lineSize);
+    }
+
+    function updateReaderUI() {
+      const total = state.tokens.length;
+      const idx = total ? clamp(state.index, 0, total - 1) : 0;
+      state.index = idx;
+
+      els.focusWord.textContent = total ? state.tokens[idx] : '—';
+      els.wpmLabel.textContent = `${Math.round(state.wpm)} WPM`;
+      els.indexLabel.textContent = `${total ? idx + 1 : 0} / ${total}`;
+      els.progress.style.width = `${total ? ((idx + 1) / total) * 100 : 0}%`;
+
+      const center = currentLineIndex();
+      const from = clamp(center - 4, 0, Math.max(state.linesCache.length - 1, 0));
+      const to = clamp(center + 4, 0, Math.max(state.linesCache.length - 1, 0));
+
+      let html = '';
+      for (let lineIdx = from; lineIdx <= to; lineIdx++) {
+        const line = state.linesCache[lineIdx];
+        if (!line) continue;
+        const localActive = idx - line.start;
+        const row = line.words.map((w, i) => i === localActive ? `<span class="active-word">${escapeHtml(w)}</span>` : escapeHtml(w)).join(' ');
+        html += `<div class="line ${lineIdx === center ? 'active' : ''}">${row}</div>`;
+      }
+      els.contextArea.innerHTML = html;
+    }
+
+    function escapeHtml(s) {
+      return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function tick(t) {
+      if (!state.playing) return;
+      if (!state.lastTick) state.lastTick = t;
+      const interval = 60000 / Math.max(60, state.wpm);
+      if (t - state.lastTick >= interval) {
+        state.lastTick = t;
+        if (state.index < state.tokens.length - 1) {
+          state.index += 1;
+          updateReaderUI();
+          if (state.index % 8 === 0) saveLocal();
+        } else {
+          state.playing = false;
+          state.holdActive = false;
+          state.gesture = 'fine';
+          updateGestureLabel();
+        }
+      }
+      state.raf = requestAnimationFrame(tick);
+    }
+
+    function startPlay() {
+      if (!state.tokens.length) return;
+      if (state.playing) return;
+      state.playing = true;
+      state.lastTick = 0;
+      state.raf = requestAnimationFrame(tick);
+      updateGestureLabel();
+    }
+
+    function stopPlay() {
+      state.playing = false;
+      if (state.raf) cancelAnimationFrame(state.raf);
+      state.raf = null;
+      updateGestureLabel();
+      saveLocal();
+    }
+
+    function updateGestureLabel() {
+      const map = {
+        pause: 'In pausa',
+        hold: 'Hold: lettura attiva',
+        speed: 'Gesture verticale: velocità',
+        scrub: 'Gesture orizzontale: timeline',
+        fine: 'Fine testo'
+      };
+      els.gestureMode.textContent = map[state.gesture] || 'In pausa';
+    }
+
+    function handlePointerDown(e) {
+      if (!state.tokens.length) return;
+      state.pointerId = e.pointerId;
+      state.holdActive = true;
+      state.ptrStartX = state.ptrLastX = e.clientX;
+      state.ptrStartY = state.ptrLastY = e.clientY;
+      state.baseWpm = state.wpm;
+      state.baseIndex = state.index;
+      state.gesture = 'hold';
+      els.readerPad.setPointerCapture(e.pointerId);
+      startPlay();
+      e.preventDefault();
+    }
+
+    function handlePointerMove(e) {
+      if (!state.holdActive || e.pointerId !== state.pointerId) return;
+
+      const dx = e.clientX - state.ptrStartX;
+      const dy = e.clientY - state.ptrStartY;
+      const adx = Math.abs(dx);
+      const ady = Math.abs(dy);
+
+      if (adx > ady + 8) {
+        state.gesture = 'scrub';
+        stopPlay();
+        const jump = Math.round(dx / 10);
+        state.index = clamp(state.baseIndex + jump, 0, Math.max(state.tokens.length - 1, 0));
+        updateReaderUI();
+      } else if (ady > adx + 8) {
+        state.gesture = 'speed';
+        const delta = -dy * 1.8;
+        state.wpm = clamp(state.baseWpm + delta, 60, 1200);
+        if (!state.playing) startPlay();
+        updateReaderUI();
+      } else {
+        state.gesture = 'hold';
+        if (!state.playing) startPlay();
+      }
+
+      state.ptrLastX = e.clientX;
+      state.ptrLastY = e.clientY;
+      updateGestureLabel();
+      e.preventDefault();
+    }
+
+    function handlePointerUp(e) {
+      if (e.pointerId !== state.pointerId) return;
+      state.holdActive = false;
+      state.pointerId = null;
+      state.gesture = 'pause';
+      stopPlay();
+      updateGestureLabel();
+      e.preventDefault();
+    }
+
+    async function readFile(file) {
+      if (!file) return;
+      const ext = file.name.toLowerCase().split('.').pop();
+      els.fileStatus.textContent = 'Caricamento...';
+
+      try {
+        if (ext === 'txt' || ext === 'md') {
+          const txt = await file.text();
+          setText(txt);
+          els.fileStatus.textContent = `Caricato: ${file.name}`;
+          return;
+        }
+
+        if (ext === 'pdf') {
+          const mod = await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs');
+          mod.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';
+          const buffer = await file.arrayBuffer();
+          const pdf = await mod.getDocument({ data: buffer }).promise;
+          let txt = '';
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const content = await page.getTextContent();
+            txt += content.items.map(it => it.str).join(' ') + ' ';
+          }
+          setText(txt);
+          els.fileStatus.textContent = `PDF importato: ${file.name} (${pdf.numPages} pagine)`;
+          return;
+        }
+
+        if (ext === 'epub') {
+          const raw = await file.arrayBuffer();
+          const decoder = new TextDecoder('utf-8');
+          const preview = decoder.decode(raw.slice(0, 220000));
+          const cleaned = preview.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+          setText(cleaned);
+          els.fileStatus.textContent = `EPUB convertito in modalità compatibilità (estrazione testuale parziale).`;
+          return;
+        }
+
+        els.fileStatus.textContent = 'Formato non supportato. Usa TXT/MD/PDF/EPUB.';
+      } catch (err) {
+        console.error(err);
+        els.fileStatus.textContent = 'Errore nel parsing del file.';
+      }
+    }
+
+    async function importFromUrl(url) {
+      if (!url) return;
+      els.urlStatus.textContent = 'Import in corso...';
+      try {
+        const proxy = `https://r.jina.ai/http://${url.replace(/^https?:\/\//, '')}`;
+        const res = await fetch(proxy);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const txt = await res.text();
+        const cleaned = txt
+          .replace(/```[\s\S]*?```/g, ' ')
+          .replace(/[#>*_`~\-]{1,}/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+        if (cleaned.length < 60) throw new Error('Testo insufficiente');
+        setText(cleaned);
+        els.urlStatus.textContent = 'Contenuto importato. Se il testo è sporco, prova copia/incolla manuale.';
+      } catch (err) {
+        els.urlStatus.textContent = 'Import fallito per limiti CORS/sito. Usa copia/incolla o file.';
+      }
+    }
+
+    function applyInputs() {
+      state.wpm = clamp(Number(els.wpmInput.value || 320), 60, 1200);
+      state.lineSize = clamp(Number(els.lineSizeInput.value || 10), 6, 20);
+      buildLines();
+      updateReaderUI();
+      saveLocal();
+    }
+
+    function startReader() {
+      applyInputs();
+      if (!state.tokens.length) {
+        alert('Prima importa o incolla un testo.');
+        return;
+      }
+      showScreen('reader');
+      updateReaderUI();
+      updateGestureLabel();
+    }
+
+    function setupTabs() {
+      els.sourceTabs.addEventListener('click', e => {
+        const btn = e.target.closest('.tab');
+        if (!btn) return;
+        const tab = btn.dataset.tab;
+        [...els.sourceTabs.querySelectorAll('.tab')].forEach(t => t.classList.toggle('active', t === btn));
+        ['paste','file','url'].forEach(name => {
+          document.getElementById(`panel-${name}`).classList.toggle('hidden', name !== tab);
+        });
+      });
+    }
+
+    function wire() {
+      setupTabs();
+
+      els.sampleText.addEventListener('click', importDemo);
+      els.loadText.addEventListener('click', () => {
+        const txt = els.textInput.value.trim();
+        if (!txt) return;
+        state.index = 0;
+        setText(txt);
+      });
+      els.fileInput.addEventListener('change', e => readFile(e.target.files[0]));
+      els.loadUrl.addEventListener('click', () => importFromUrl(els.urlInput.value.trim()));
+      els.urlHelp.addEventListener('click', () => {
+        alert('URL supporta import in sola modalità front-end. Alcuni siti bloccano fetch esterne. In quel caso usa copia/incolla o file locale.');
+      });
+
+      els.wpmInput.addEventListener('change', applyInputs);
+      els.lineSizeInput.addEventListener('change', applyInputs);
+      els.startReader.addEventListener('click', startReader);
+      els.backSetup.addEventListener('click', () => {
+        stopPlay();
+        showScreen('setup');
+      });
+      els.togglePlay.addEventListener('click', () => {
+        if (state.playing) stopPlay(); else startPlay();
+      });
+
+      els.restoreSession.addEventListener('click', () => {
+        const saved = loadLocal();
+        if (!saved?.text) {
+          alert('Nessuna sessione trovata.');
+          return;
+        }
+        state.index = saved.index || 0;
+        state.wpm = clamp(saved.wpm || 320, 60, 1200);
+        state.lineSize = clamp(saved.lineSize || 10, 6, 20);
+        els.wpmInput.value = String(state.wpm);
+        els.lineSizeInput.value = String(state.lineSize);
+        els.textInput.value = saved.text;
+        setText(saved.text);
+      });
+
+      els.clearAll.addEventListener('click', () => {
+        localStorage.removeItem(STORAGE_KEY);
+        state.text = '';
+        state.tokens = [];
+        state.index = 0;
+        els.textInput.value = '';
+        els.fileStatus.textContent = '';
+        els.urlStatus.textContent = '';
+        stopPlay();
+        updateReaderUI();
+        syncHeader();
+      });
+
+      els.readerPad.addEventListener('pointerdown', handlePointerDown, { passive: false });
+      els.readerPad.addEventListener('pointermove', handlePointerMove, { passive: false });
+      els.readerPad.addEventListener('pointerup', handlePointerUp, { passive: false });
+      els.readerPad.addEventListener('pointercancel', handlePointerUp, { passive: false });
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) stopPlay();
+      });
+    }
+
+    function boot() {
+      wire();
+      const saved = loadLocal();
+      if (saved?.text) {
+        state.index = saved.index || 0;
+        state.wpm = clamp(saved.wpm || 320, 60, 1200);
+        state.lineSize = clamp(saved.lineSize || 10, 6, 20);
+        els.textInput.value = saved.text;
+        els.wpmInput.value = String(state.wpm);
+        els.lineSizeInput.value = String(state.lineSize);
+        setText(saved.text);
+        els.saveState.textContent = 'Sessione trovata';
+      } else {
+        syncHeader();
+      }
+      updateGestureLabel();
+      updateReaderUI();
+    }
+
+    boot();
+  </script>
+</body>
+</html>
